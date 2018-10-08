@@ -1,3 +1,3 @@
-libTHTensor.0.dylib:
-	gcc -O3 -msse4.2 -mfma -mavx -mavx2 -march=native -mtune=native -framework Accelerate -c *.c vector/AVX.c vector/AVX2.c
-	gcc -shared -o libTHTensor.0.dylib *.o -framework Accelerate
+libTHTensor.0.so:
+	gcc -O3 -msse4.2 -mfma -mavx -mavx2 -march=native -mtune=native -fPIC -c *.c vector/AVX.c vector/AVX2.c
+	gcc -shared -o libTHTensor.0.so *.o -lopenblas
