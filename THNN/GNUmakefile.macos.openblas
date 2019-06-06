@@ -1,0 +1,5 @@
+CC=/usr/local/gfortran/bin/gcc
+
+libTHNeural.0.dylib:
+	$(CC) -O3 -msse4.2 -mfma -mavx -mavx2 -march=native -mtune=native -fopenmp -I/usr/local/openblas/include -I../TH -I. -c init.c
+	$(CC) -shared -o libTHNeural.0.dylib *.o -L/usr/local/lib -L/usr/local/openblas/lib -lTHTensor -lopenblas -lgomp
