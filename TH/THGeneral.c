@@ -137,7 +137,7 @@ static ptrdiff_t heapSize = 0;
 static __thread ptrdiff_t heapDelta = 0;
 static const ptrdiff_t heapMaxDelta = (ptrdiff_t)1e6; // limit to +/- 1MB before updating heapSize
 static const ptrdiff_t heapMinDelta = (ptrdiff_t)-1e6;
-static __thread ptrdiff_t heapSoftmax = (ptrdiff_t)3e8; // 300MB, adjusted upward dynamically
+static __thread ptrdiff_t heapSoftmax = (ptrdiff_t)1073741824; // 1GB, adjusted upward dynamically
 static const double heapSoftmaxGrowthThresh = 0.8; // grow softmax if >80% max after GC
 static const double heapSoftmaxGrowthFactor = 1.4; // grow softmax by 40%
 
@@ -147,6 +147,10 @@ static __thread ptrdiff_t lispHardMax = (ptrdiff_t)2147483648;
 void THSetGCHardMax (ptrdiff_t hardmax) {
   lispHardMax = hardmax;
 }
+
+ptrdiff_t THGetHeapSize () { return heapSize; }
+__thread ptrdiff_t THGetHeapDelta () { return heapDelta; }
+__thread ptrdiff_t THGetHeapSoftmax () { return heapSoftmax; }
 // XXX
 
 /* Optional hook for integrating with a garbage-collected frontend.
@@ -207,6 +211,10 @@ static void maybeTriggerGC(ptrdiff_t curHeapSize) {
       // XXX LISP GC HACK
       if (heapSoftmax > lispHardMax) heapSoftmax = lispHardMax;
       // XXX
+    }
+
+    if (newHeapSize < heapSoftmax * 0.5) {
+      heapSoftmax = newHeapSize > 1073741824 ? newHeapSize : 1073741824;
     }
   }
 }

@@ -732,8 +732,10 @@ void THTensor_(free)(THTensor *self)
   {
     if(THAtomicDecrementRef(&self->refcount))
     {
-      THFree(self->size);
-      THFree(self->stride);
+      if(self->size)
+        THFree(self->size);
+      if(self->stride)
+        THFree(self->stride);
       if(self->storage)
         THStorage_(free)(self->storage);
       THFree(self);
