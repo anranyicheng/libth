@@ -212,10 +212,6 @@ static void maybeTriggerGC(ptrdiff_t curHeapSize) {
       if (heapSoftmax > lispHardMax) heapSoftmax = lispHardMax;
       // XXX
     }
-
-    if (newHeapSize < heapSoftmax * 0.5) {
-      heapSoftmax = newHeapSize > 1073741824 ? newHeapSize : 1073741824;
-    }
   }
 }
 
