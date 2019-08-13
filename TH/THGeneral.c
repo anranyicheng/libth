@@ -141,18 +141,6 @@ static __thread ptrdiff_t heapSoftmax = (ptrdiff_t)1073741824; // 1GB, adjusted 
 static const double heapSoftmaxGrowthThresh = 0.8; // grow softmax if >80% max after GC
 static const double heapSoftmaxGrowthFactor = 1.4; // grow softmax by 40%
 
-// XXX HACK FOR LISP
-static __thread ptrdiff_t lispHardMax = (ptrdiff_t)2147483648;
-
-void THSetGCHardMax (ptrdiff_t hardmax) {
-  lispHardMax = hardmax;
-}
-
-ptrdiff_t THGetHeapSize () { return heapSize; }
-__thread ptrdiff_t THGetHeapDelta () { return heapDelta; }
-__thread ptrdiff_t THGetHeapSoftmax () { return heapSoftmax; }
-// XXX
-
 /* Optional hook for integrating with a garbage-collected frontend.
  *
  * If torch is running with a garbage-collected frontend (e.g. Lua),
@@ -208,9 +196,6 @@ static void maybeTriggerGC(ptrdiff_t curHeapSize) {
 
     if (newHeapSize > heapSoftmax * heapSoftmaxGrowthThresh) {
       heapSoftmax = (ptrdiff_t)(heapSoftmax * heapSoftmaxGrowthFactor);
-      // XXX LISP GC HACK
-      if (heapSoftmax > lispHardMax) heapSoftmax = lispHardMax;
-      // XXX
     }
   }
 }
