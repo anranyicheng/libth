@@ -10,4 +10,5 @@
 #define HAVE_SHM_UNLINK 1
 #define HAVE_MALLOC_USABLE_SIZE 1
 
+#define TH_BLAS_MKL 1
 #define BLAS_USE_CBLAS_DOT 1

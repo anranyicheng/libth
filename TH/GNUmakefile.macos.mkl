@@ -1,0 +1,3 @@
+libTHTensor.0.dylib:
+	clang -Ofast -msse4.2 -mfma -mavx -mavx2 -march=native -mtune=native -ffp-contract=fast -flto -c *.c vector/AVX.c vector/AVX2.c
+	clang -shared -o libTHTensor.0.dylib *.o -L/usr/local/lib -Wl,-rpath,/usr/local/lib -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread

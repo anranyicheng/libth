@@ -1,0 +1,3 @@
+libTHNeural.0.dylib:
+	clang -Ofast -msse4.2 -mfma -mavx -mavx2 -march=native -mtune=native -ffp-contract=fast -flto -c -I../TH -I. init.c
+	clang -shared -o libTHNeural.0.dylib *.o -L/usr/local/lib -lTHTensor
