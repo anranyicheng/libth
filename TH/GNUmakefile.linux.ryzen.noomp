@@ -1,0 +1,3 @@
+libTHTensor.0.so:
+	gcc -O3 -msse4.2 -mfma -mavx -mavx2 -march=znver1 -mtune=znver1 -fPIC -c *.c vector/AVX.c vector/AVX2.c
+	gcc -shared -o libTHTensor.0.so *.o -lopenblas -lrt -lm
