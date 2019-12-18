@@ -2,7 +2,18 @@
 #define _THMATH_H
 
 static inline double TH_sigmoid(double value) {
-  return 1.0 / (1.0 + exp(-value));
+  if (value < 0) {
+    if (value < -103.97)
+      return 0.0f;
+    else {
+      double k = exp(value);
+      double r = k / (1 + k);
+      return r;
+    }
+  }
+  else {
+    return 1.0 / (1.0 + exp(-value));
+  }
 }
 
 static inline double TH_frac(double x) {
@@ -18,7 +29,18 @@ static inline double TH_lerp(double a, double b, double weight) {
 }
 
 static inline float TH_sigmoidf(float value) {
-  return 1.0f / (1.0f + expf(-value));
+  if (value < 0) {
+    if (value < -103.97)
+      return 0.0f;
+    else {
+      float k = expf(value);
+      float r = k / (1.0f + k);
+      return r;
+    }
+  }
+  else {
+    return 1.0f / (1.0f + expf(-value));
+  }
 }
 
 static inline float TH_fracf(float x) {
