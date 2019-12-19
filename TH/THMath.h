@@ -3,7 +3,7 @@
 
 static inline double TH_sigmoid(double value) {
   if (value < 0) {
-    if (value < -103.97)
+    if (value < -745.1332)
       return 0.0f;
     else {
       double k = exp(value);
