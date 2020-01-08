@@ -71,6 +71,9 @@
 #include "generic/BCECriterion.c"
 #include "THGenerateFloatTypes.h"
 
+#include "generic/CELU.c"
+#include "THGenerateFloatTypes.h"
+
 #include "generic/ClassNLLCriterion.c"
 #include "THGenerateFloatTypes.h"
 
@@ -132,6 +135,9 @@
 #include "THGenerateFloatTypes.h"
 
 #include "generic/RReLU.c"
+#include "THGenerateFloatTypes.h"
+
+#include "generic/SELU.c"
 #include "THGenerateFloatTypes.h"
 
 #include "generic/Sigmoid.c"
@@ -280,4 +286,3 @@
 
 #include "generic/VolumetricUpSamplingTrilinear.c"
 #include "THGenerateFloatTypes.h"
-
