@@ -42,11 +42,12 @@ void THNN_(SELU_updateGradInput)(
 {
   real alpha = TH_CONVERT_ACCREAL_TO_REAL(alpha_);
   real lambda = TH_CONVERT_ACCREAL_TO_REAL(lambda_);
+  real la = alpha * lambda;
   THNN_CHECK_NELEMENT(input, gradOutput);
   if(inplace) {
     TH_TENSOR_APPLY2(real, gradOutput, real, output,
       if(*output_data <= 0) {
-        *gradOutput_data *= exp(*input_data) * alpha;
+        *gradOutput_data *= *output_data + la;
       } else {
         *gradOutput_data *= lambda;
       }
@@ -55,7 +56,7 @@ void THNN_(SELU_updateGradInput)(
   } else {
     THTensor_(resizeAs)(gradInput, output);
     TH_TENSOR_APPLY3(real, gradInput, real, gradOutput, real, output,
-      *gradInput_data = *output_data <= 0 ? *gradOutput_data * (exp(*input_data) * alpha) : *gradOutput_data *lambda;
+      *gradInput_data = *output_data <= 0 ? *gradOutput_data * (*output_data + la) : *gradOutput_data *lambda;
     );
   }
 }
