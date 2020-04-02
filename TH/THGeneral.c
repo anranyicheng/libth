@@ -200,6 +200,13 @@ static void maybeTriggerGC(ptrdiff_t curHeapSize) {
   }
 }
 
+// XXX LISP HACK
+static __thread void (*lispGCFunction)(void) = NULL;
+void THSetLispGCMannager (void (*lispGCFunction_)(void)) {
+  lispGCFunction = lispGCFunction_;
+}
+// XXX LISP HACK
+
 // hooks into the TH heap tracking
 void THHeapUpdate(ptrdiff_t size) {
 #ifdef DEBUG
@@ -220,6 +227,10 @@ void THHeapUpdate(ptrdiff_t size) {
 
   if (size > 0) {
     maybeTriggerGC(newHeapSize);
+  }
+
+  if (size > 0 && lispGCFunction) {
+    lispGCFunction();
   }
 }
 
