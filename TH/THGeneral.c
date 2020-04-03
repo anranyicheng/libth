@@ -201,12 +201,13 @@ static void maybeTriggerGC(ptrdiff_t curHeapSize) {
 }
 
 // XXX LISP HACK
+static ptrdiff_t allocatedHeapSize = 0;
 static __thread void (*lispGCFunction)(void) = NULL;
 void THSetLispGCManager (void (*lispGCFunction_)(void)) {
   lispGCFunction = lispGCFunction_;
 }
 ptrdiff_t THGetCurrentHeapSize (void) {
-  ptrdiff_t sz = THAtomicGetPtrdiff(&heapSize);
+  ptrdiff_t sz = THAtomicGetPtrdiff(&allocatedHeapSize);
   return sz;
 }
 // XXX LISP HACK
@@ -219,6 +220,9 @@ void THHeapUpdate(ptrdiff_t size) {
   if (size < 0 && heapDelta < PTRDIFF_MIN - size)
     THError("THHeapUpdate: heapDelta(%td) + decreased(%td) < PTRDIFF_MIN, heapDelta underflow!", heapDelta, size);
 #endif
+
+  // XXX for Lisp GC manager - refer next comment on thread contention
+  THAtomicAddPtrdiff(&allocatedHeapSize, size);
 
   heapDelta += size;
 
@@ -261,6 +265,7 @@ static void* THAllocInternal(ptrdiff_t size)
   }
 
   THHeapUpdate(getAllocSize(ptr));
+
   return ptr;
 }
 
