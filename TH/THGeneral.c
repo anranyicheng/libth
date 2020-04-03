@@ -202,8 +202,12 @@ static void maybeTriggerGC(ptrdiff_t curHeapSize) {
 
 // XXX LISP HACK
 static __thread void (*lispGCFunction)(void) = NULL;
-void THSetLispGCMannager (void (*lispGCFunction_)(void)) {
+void THSetLispGCManager (void (*lispGCFunction_)(void)) {
   lispGCFunction = lispGCFunction_;
+}
+ptrdiff_t THGetCurrentHeapSize (void) {
+  ptrdiff_t sz = THAtomicGetPtrdiff(&heapSize);
+  return sz;
 }
 // XXX LISP HACK
 
