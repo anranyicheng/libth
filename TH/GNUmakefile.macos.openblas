@@ -2,4 +2,4 @@ CC=/usr/local/gfortran/bin/gcc
 
 libTHTensor.0.dylib:
 	$(CC) -O3 -msse4.2 -mfma -mavx -mavx2 -march=native -mtune=native -fopenmp -I/usr/local/openblas/include -c *.c vector/AVX.c vector/AVX2.c
-	$(CC) -shared -o libTHTensor.0.dylib *.o -L/usr/local/openblas/lib -lopenblas -lgomp
+	$(CC) -shared -o libTHTensor.0.dylib *.o -L/usr/local/lib -L/usr/local/lib/gfortran -lopenblas -lgomp
