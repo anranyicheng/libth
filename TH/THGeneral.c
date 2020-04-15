@@ -5,6 +5,10 @@
 #include <omp.h>
 #endif
 
+#ifdef TH_BLAS_OPENBLAS
+#include <cblas.h>
+#endif
+
 #ifndef TH_HAVE_THREAD
 #define __thread
 #elif _MSC_VER
@@ -344,6 +348,9 @@ void THSetNumThreads(int num_threads)
 #ifdef _OPENMP
   omp_set_num_threads(num_threads);
 #endif
+#ifdef TH_BLAS_OPENBLAS
+  openblas_set_num_threads(num_threads);
+#endif
 }
 
 int THGetNumThreads(void)
@@ -351,7 +358,11 @@ int THGetNumThreads(void)
 #ifdef _OPENMP
   return omp_get_max_threads();
 #else
+#ifdef TH_BLAS_OPENBLAS
+  return openblas_get_num_threads();
+#else
   return 1;
+#endif
 #endif
 }
 
@@ -360,7 +371,11 @@ int THGetNumCores(void)
 #ifdef _OPENMP
   return omp_get_num_procs();
 #else
+#ifdef TH_BLAS_OPENBLAS
+  return openblas_get_num_procs();
+#else
   return 1;
+#endif
 #endif
 }
 

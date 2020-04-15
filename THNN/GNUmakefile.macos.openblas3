@@ -1,0 +1,3 @@
+libTHNeural.0.dylib:
+	$(CC) -O3 -msse4.2 -mfma -mavx -mavx2 -march=native -mtune=native -I/usr/local/include -I../TH -I. -c init.c
+	$(CC) -shared -o libTHNeural.0.dylib *.o -L/usr/local/lib -L/usr/local/lib -lTHTensor
