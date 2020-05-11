@@ -3,7 +3,7 @@
 
 static inline double TH_sigmoid(double value) {
   if (value < 0) {
-    if (value < -745.1332)
+    if (value < -744.44)
       return 0.0f;
     else {
       double k = exp(value);
@@ -12,7 +12,10 @@ static inline double TH_sigmoid(double value) {
     }
   }
   else {
-    return 1.0 / (1.0 + exp(-value));
+    if (value > 36.7368)
+      return 1.0f;
+    else
+        return 1.0 / (1.0 + exp(-value));
   }
 }
 
@@ -30,7 +33,7 @@ static inline double TH_lerp(double a, double b, double weight) {
 
 static inline float TH_sigmoidf(float value) {
   if (value < 0) {
-    if (value < -103.97)
+    if (value < -103.27)
       return 0.0f;
     else {
       float k = expf(value);
@@ -39,7 +42,10 @@ static inline float TH_sigmoidf(float value) {
     }
   }
   else {
-    return 1.0f / (1.0f + expf(-value));
+    if (value > 16.6355)
+      return 1.0f;
+    else
+      return 1.0f / (1.0f + expf(-value));
   }
 }
 
