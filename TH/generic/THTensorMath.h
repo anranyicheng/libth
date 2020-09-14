@@ -189,6 +189,9 @@ TH_API void THTensor_(linspace)(THTensor *r_, real a, real b, long n);
 TH_API void THTensor_(logspace)(THTensor *r_, real a, real b, long n);
 TH_API void THTensor_(rand)(THTensor *r_, THGenerator *_generator, THLongStorage *size);
 TH_API void THTensor_(randn)(THTensor *r_, THGenerator *_generator, THLongStorage *size);
+
+TH_API void THTensor_(polygamma)(long n, THTensor *input, THTensor *output);
+TH_API void THTensor_(lbeta)(THTensor *a, THTensor *b, THTensor *output);
 #endif
 
 #if defined(TH_REAL_IS_BYTE)

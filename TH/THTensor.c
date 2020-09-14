@@ -32,6 +32,3 @@
 
 #include "generic/THTensorLapack.c"
 #include "THGenerateFloatTypes.h"
-
-#include "generic/THGamma.c"
-#include "THGenerateFloatTypes.h"

@@ -39,8 +39,4 @@
 #include "generic/THTensorLapack.h"
 #include "THGenerateFloatTypes.h"
 
-/* gamma support */
-#include "generic/THGamma.h"
-#include "THGenerateFloatTypes.h"
-
 #endif
