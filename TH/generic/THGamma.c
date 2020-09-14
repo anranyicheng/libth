@@ -479,42 +479,6 @@ THTensor_(polygamma)(long n, THTensor *input, THTensor *output) {
 }
 
 void
-THTensor_(lgamma)(THTensor *input, THTensor *output) {
-  real *inputData, *outputData;
-
-  if (input->nDimension != 2) {
-    THError("lgamma: input is supposed to be 2D.");
-    return;
-  }
-
-  inputData = THTensor_(data)(input);
-  outputData = THTensor_(data)(output);
-
-  long inputStrideLength = input->stride[0];
-  long inputStrideWidth = input->stride[1];
-
-  long outputStrideLength = output->stride[0];
-  long outputStrideWidth = output->stride[1];
-
-  long height = input->size[0];
-  long width = input->size[1];
-
-  for (long x = 0; x < width; x++) {
-    for (long y = 0; y < height; y++) {
-      const long outAddress = x * outputStrideWidth + y * outputStrideHeight;
-      const long inAddress = x * inputStrideWidth + y * inputStrideHeight;
-#if defined(TH_REAL_IS_DOUBLE)
-      outputData[outAddress] = lgamma(n, inputData[inAddress]);
-#else
-      outputData[outAddress] = lgammaf(n, inputData[inAddress]);
-#endif
-    }
-  }
-
-  return;
-}
-
-void
 THTensor_(lbeta)(THTensor *a, THTensor *b, THTensor *output) {
   real *aData, *bData, *outputData;
 
