@@ -70,6 +70,12 @@ TH_API double THRandom_cauchy(THGenerator *_generator, double median, double sig
 */
 TH_API double THRandom_logNormal(THGenerator *_generator, double mean, double stdv);
 
+/* Generates a random number from a Gamma distribution. */
+TH_API double THRandom_gamma(THGenerator *_generator, double shape);
+
+/* Generates a random number from a Beta distribution. */
+TH_API double THRandom_beta(THGenerator *_generator, double a, double b);
+
 /** Generates a random number from a geometric distribution.
     It returns an integer #i#, where $p(i) = (1-p) * p^(i-1)$.
     p must satisfy $0 < p < 1$.

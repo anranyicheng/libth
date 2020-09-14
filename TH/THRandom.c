@@ -259,6 +259,86 @@ double THRandom_logNormal(THGenerator *_generator, double mean, double stdv)
   return(exp(THRandom_normal(_generator, mean, stdv)));
 }
 
+double THRandom_gamma(THGenerator *state, double shape)
+{
+  if (shape < 1.) {
+    double u, v, x, y;
+    while (1) {
+      u = THRandom_uniform(state, 0, 1);
+      v = THRandom_exponential(state, 1);
+      if (u <= 1.0 - shape) {
+        x = pow(u, 1./shape);
+        if (x <= v) {
+          return x;
+        }
+      }
+      else {
+        y = -log((1 - u)/shape);
+        x = pow(1.0 - shape + shape*y, 1./shape);
+        if (x <= (v + y)) {
+          return x;
+        }
+      }
+    }
+  }
+  else if (shape > 1.) {
+    double d = shape - (1./3.);
+    double c = 1./sqrt(9. * d);
+    double u, v, x = 0;
+    do {
+      x = THRandom_normal(state, 0, 1);
+      v = (1 + c * x) * (1 + c * x) * (1 + c * x);
+      u = THRandom_uniform(state, 0, 1);
+    } while (v <= 0. ||
+             (((log(u) >= 0.5 * x * x + d * (1 - v + log(v)))) &&
+              (u < 1.0 - 0.0331*(x*x)*(x*x))));
+    return d * v;
+  }
+  else {
+    return THRandom_exponential(state, 1);
+  }
+}
+
+double THRandom_beta(THGenerator *_generator, double a, double b)
+{
+  double output;
+
+  if (a <= 1 && b <= 1) {
+    double U, V, X, Y;
+
+    while (1) {
+      U = THRandom_uniform(_generator, 0, 1);
+      V = THRandom_uniform(_generator, 0, 1);
+      X = pow(U, 1/a);
+      Y = pow(V, 1/a);
+
+      if ((X + Y) <= 1) {
+        if ((X + Y) > 0) {
+          output = X / (X + Y);
+          break;
+        }
+        else {
+          double logX = log(U)/a;
+          double logY = log(V)/b;
+          double logM = logX > logY ? logX : logY;
+          logX -= logM;
+          logY -= logM;
+
+          output = exp(logX - log(exp(logX) + exp(logY)));
+          break;
+        }
+      }
+    }
+  }
+  else {
+    double Ga = THRandom_gamma(_generator, a);
+    double Gb = THRandom_gamma(_generator, b);
+    output = Ga / (Ga + Gb);
+  }
+
+  return output;
+}
+
 int THRandom_geometric(THGenerator *_generator, double p)
 {
   THArgCheck(p > 0 && p < 1, 1, "must be > 0 and < 1");
