@@ -684,3 +684,506 @@ int THRandom_binomial(THGenerator *_generator, int nin, double pp)
     ix = n - ix;
   return (int)ix;
 }
+
+double afc(int i)
+{
+  // If (i > 7), use Stirling's approximation, otherwise use table lookup.
+  const static double al[8] =
+    {
+      0.0,/*ln(0!)=ln(1)*/
+      0.0,/*ln(1!)=ln(1)*/
+      0.69314718055994530941723212145817,/*ln(2) */
+      1.79175946922805500081247735838070,/*ln(6) */
+      3.17805383034794561964694160129705,/*ln(24)*/
+      4.78749174278204599424770093452324,
+      6.57925121201010099506017829290394,
+      8.52516136106541430016553103634712
+      /* 10.60460290274525022841722740072165, approx. value below =
+         10.6046028788027; rel.error = 2.26 10^{-9}
+
+         FIXME: Use constants and if(n > ..) decisions from ./stirlerr.c
+         -----  will be even *faster* for n > 500 (or so)
+      */
+    };
+
+  if (i < 0) {
+    THError("afc: i should be positive number.");
+    return -1; // unreached
+  }
+  if (i <= 7)
+    return al[i];
+  // else i >= 8 :
+  double di = i, i2 = di*di;
+  return (di + 0.5) * log(di) - di + 0.918938533204672741780329736406 +
+    (0.0833333333333333 - 0.00277777777777778 / i2) / di;
+}
+
+
+int THRandom_hypergeometric(THGenerator *_generator, int nn1in, int nn2in, int kkin)
+{
+  int nn1, nn2, kk;
+  int ix; // return value (coerced to double at the very end)
+  char setup1, setup2;
+
+  /* These should become 'thread_local globals' : */
+  static int ks = -1, n1s = -1, n2s = -1;
+  static int mv, minjx, maxjx;
+  static int k, n1, n2; // <- not allowing larger integer par
+  static double tn;
+
+  // II :
+  static double w;
+  // III:
+  static double a, d, s, xl, xr, kl, kr, lamdl, lamdr, p1, p2, p3;
+
+  /* check parameter validity */
+
+  if(!isfinite(nn1in) || !isfinite(nn2in) || !isfinite(kkin)){
+    THError("hypergeometric: nr, nb, k should be finite.");
+    return (int)nan("");
+  }
+
+  if (nn1in < 0 || nn2in < 0 || kkin < 0 || kkin > nn1in + nn2in){
+    THError("hypergeometric: nr, nb, k should be positive; k <= nr + nb");
+    return (int)nan("");
+  }
+
+  nn1 = (int)nn1in;
+  nn2 = (int)nn2in;
+  kk  = (int)kkin;
+
+  /* if new parameter values, initialize */
+  if (nn1 != n1s || nn2 != n2s) {
+    setup1 = 1;	setup2 = 1;
+  } else if (kk != ks) {
+    setup1 = 0;	setup2 = 1;
+  } else {
+    setup1 = 0;	setup2 = 0;
+  }
+  if (setup1) {
+    n1s = nn1;
+    n2s = nn2;
+    tn = nn1 + nn2;
+    if (nn1 <= nn2) {
+      n1 = nn1;
+      n2 = nn2;
+    } else {
+      n1 = nn2;
+      n2 = nn1;
+    }
+  }
+  if (setup2) {
+    ks = kk;
+    if (kk + kk >= tn) {
+      k = (int)(tn - kk);
+    } else {
+      k = kk;
+    }
+  }
+  if (setup1 || setup2) {
+    mv = (int) ((k + 1.) * (n1 + 1.) / (tn + 2.));
+    minjx = 0 < k - n2 ? k - n2 : 0;
+    maxjx = n1 < k ? n1 : k;
+  }
+  /* generate random variate --- Three basic cases */
+
+  if (minjx == maxjx) { /* I: degenerate distribution ---------------- */
+    ix = maxjx;
+    goto L_finis; // return appropriate variate
+
+  } else if (mv - minjx < 10) { // II: (Scaled) algorithm HIN (inverse transformation) ----
+    const static double scale = 1e25; // scaling factor against (early) underflow
+    const static double con = 57.5646273248511421;
+    // 25*log(10) = log(scale) { <==> exp(con) == scale }
+    if (setup1 || setup2) {
+      double lw; // log(w);  w = exp(lw) * scale = exp(lw + log(scale)) = exp(lw + con)
+      if (k < n2) {
+        lw = afc(n2) + afc(n1 + n2 - k) - afc(n2 - k) - afc(n1 + n2);
+      } else {
+        lw = afc(n1) + afc(     k     ) - afc(k - n2) - afc(n1 + n2);
+      }
+      w = exp(lw + con);
+    }
+    double p, u;
+  L10:
+    p = w;
+    ix = minjx;
+    u = __uniform__(_generator) * scale;
+    while (u > p) {
+      u -= p;
+      p *= ((double) n1 - ix) * (k - ix);
+      ix++;
+      p = p / ix / (n2 - k + ix);
+      if (ix > maxjx)
+        goto L10;
+      // FIXME  if(p == 0.)  we also "have lost"  => goto L10
+    }
+  } else { /* III : H2PE Algorithm --------------------------------------- */
+
+    double u,v;
+
+    if (setup1 || setup2) {
+      s = sqrt((tn - k) * k * n1 * n2 / (tn - 1) / tn / tn);
+
+      /* remark: d is defined in reference without int. */
+      /* the truncation centers the cell boundaries at 0.5 */
+
+      d = (int) (1.5 * s) + .5;
+      xl = mv - d + .5;
+      xr = mv + d + .5;
+      a = afc(mv) + afc(n1 - mv) + afc(k - mv) + afc(n2 - k + mv);
+      kl = exp(a - afc((int) (xl)) - afc((int) (n1 - xl))
+               - afc((int) (k - xl))
+               - afc((int) (n2 - k + xl)));
+      kr = exp(a - afc((int) (xr - 1))
+               - afc((int) (n1 - xr + 1))
+               - afc((int) (k - xr + 1))
+               - afc((int) (n2 - k + xr - 1)));
+      lamdl = -log(xl * (n2 - k + xl) / (n1 - xl + 1) / (k - xl + 1));
+      lamdr = -log((n1 - xr + 1) * (k - xr + 1) / xr / (n2 - k + xr));
+      p1 = d + d;
+      p2 = p1 + kl / lamdl;
+      p3 = p2 + kr / lamdr;
+    }
+    int n_uv = 0;
+  L30:
+    u = __uniform__(_generator) * p3;
+    v = __uniform__(_generator);
+    n_uv++;
+    if(n_uv >= 10000) {
+      THError("hypergeometric: too much rejections.");
+      return (int)nan("");
+    }
+
+    if (u < p1) {		/* rectangular region */
+      ix = (int) (xl + u);
+    } else if (u <= p2) {	/* left tail */
+      ix = (int) (xl + log(v) / lamdl);
+      if (ix < minjx)
+        goto L30;
+      v = v * (u - p1) * lamdl;
+    } else {		/* right tail */
+      ix = (int) (xr - log(v) / lamdr);
+      if (ix > maxjx)
+        goto L30;
+      v = v * (u - p2) * lamdr;
+    }
+
+    /* acceptance/rejection test */
+    char reject = 1;
+
+    if (mv < 100 || ix <= 50) {
+      /* explicit evaluation */
+      /* The original algorithm (and TOMS 668) have
+         f = f * i * (n2 - k + i) / (n1 - i) / (k - i);
+         in the (m > ix) case, but the definition of the
+         recurrence relation on p134 shows that the +1 is
+         needed. */
+      int i;
+      double f = 1.0;
+      if (mv < ix) {
+        for (i = mv + 1; i <= ix; i++)
+          f = f * (n1 - i + 1) * (k - i + 1) / (n2 - k + i) / i;
+      } else if (mv > ix) {
+        for (i = ix + 1; i <= mv; i++)
+          f = f * i * (n2 - k + i) / (n1 - i + 1) / (k - i + 1);
+      }
+      if (v <= f) {
+        reject = 0;
+      }
+    } else {
+
+      const static double deltal = 0.0078;
+      const static double deltau = 0.0034;
+
+      double e, g, r, t, y;
+      double de, dg, dr, ds, dt, gl, gu, nk, nm, ub;
+      double xk, xm, xn, y1, ym, yn, yk, alv;
+
+      /* squeeze using upper and lower bounds */
+      y = ix;
+      y1 = y + 1.0;
+      ym = y - mv;
+      yn = n1 - y + 1.0;
+      yk = k - y + 1.0;
+      nk = n2 - k + y1;
+      r = -ym / y1;
+      s = ym / yn;
+      t = ym / yk;
+      e = -ym / nk;
+      g = yn * yk / (y1 * nk) - 1.0;
+      dg = 1.0;
+      if (g < 0.0)
+        dg = 1.0 + g;
+      gu = g * (1.0 + g * (-0.5 + g / 3.0));
+      gl = gu - .25 * (g * g * g * g) / dg;
+      xm = mv + 0.5;
+      xn = n1 - mv + 0.5;
+      xk = k - mv + 0.5;
+      nm = n2 - k + xm;
+      ub = y * gu - mv * gl + deltau
+        + xm * r * (1. + r * (-0.5 + r / 3.0))
+        + xn * s * (1. + s * (-0.5 + s / 3.0))
+        + xk * t * (1. + t * (-0.5 + t / 3.0))
+        + nm * e * (1. + e * (-0.5 + e / 3.0));
+        /* test against upper bound */
+        alv = log(v);
+        if (alv > ub) {
+          reject = 1;
+        } else {
+          /* test against lower bound */
+          dr = xm * (r * r * r * r);
+          if (r < 0.0)
+            dr /= (1.0 + r);
+          ds = xn * (s * s * s * s);
+          if (s < 0.0)
+            ds /= (1.0 + s);
+          dt = xk * (t * t * t * t);
+          if (t < 0.0)
+            dt /= (1.0 + t);
+          de = nm * (e * e * e * e);
+          if (e < 0.0)
+            de /= (1.0 + e);
+          if (alv < ub - 0.25 * (dr + ds + dt + de)
+              + (y + mv) * (gl - gu) - deltal) {
+            reject = 0;
+          }
+          else {
+            /* * Stirling's formula to machine accuracy
+             */
+            if (alv <= (a - afc(ix) - afc(n1 - ix)
+                        - afc(k - ix) - afc(n2 - k + ix))) {
+              reject = 0;
+            } else {
+              reject = 1;
+            }
+          }
+        }
+    } // else
+    if (reject)
+      goto L30;
+  }
+
+
+ L_finis:
+  /* return appropriate variate */
+
+  if (kk + kk >= tn) {
+    if (nn1 > nn2) {
+      ix = kk - nn2 + ix;
+    } else {
+      ix = nn1 - ix;
+    }
+  } else {
+    if (nn1 > nn2)
+      ix = kk - ix;
+  }
+  return ix;
+
+}
+
+int THRandom_poisson(THGenerator *_generator, int mu)
+{
+#define a0	-0.5
+#define a1	 0.3333333
+#define a2	-0.2500068
+#define a3	 0.2000118
+#define a4	-0.1661269
+#define a5	 0.1421878
+#define a6	-0.1384794
+#define a7	 0.1250060
+
+#define one_7	0.1428571428571428571
+#define one_12	0.0833333333333333333
+#define one_24	0.0416666666666666667
+
+  /* Factorial Table (0:9)! */
+  const static double fact[10] =
+    {
+      1., 1., 2., 6., 24., 120., 720., 5040., 40320., 362880.
+    };
+
+  /* These are static --- persistent between calls for same mu : */
+  static int l, mv;
+
+  static double b1, b2, c, c0, c1, c2, c3;
+  static double pp[36], p0, p, q, s, d, omega;
+  static double big_l;/* integer "w/o overflow" */
+  static double muprev = 0., muprev2 = 0.;/*, muold	 = 0.*/
+
+  /* Local Vars  [initialize some for -Wall]: */
+  double del, difmuk= 0., E= 0., fk= 0., fx, fy, g, px, py, t, u= 0., v, x;
+  double pois = -1.;
+  int k, kflag, big_mu, new_big_mu = 0;
+
+  if (!isfinite(mu) || mu < 0) {
+    THError("poisson: mu should be positive number.");
+    return (int)nan("");
+  }
+
+  if (mu <= 0.)
+    return 0;
+
+  big_mu = mu >= 10.;
+  if(big_mu)
+    new_big_mu = 0;
+
+  if (!(big_mu && mu == muprev)) {/* maybe compute new persistent par.s */
+
+    if (big_mu) {
+      new_big_mu = 1;
+      /* Case A. (recalculation of s,d,l	because mu has changed):
+       * The poisson probabilities pk exceed the discrete normal
+       * probabilities fk whenever k >= m(mu).
+       */
+      muprev = mu;
+      s = sqrt(mu);
+      d = 6. * mu * mu;
+      big_l = floor(mu - 1.1484);
+      /* = an upper bound to m(mu) for all mu >= 10.*/
+    }
+    else { /* Small mu ( < 10) -- not using normal approx. */
+
+      /* Case B. (start new table and calculate p0 if necessary) */
+
+      /*muprev = 0.;-* such that next time, mu != muprev ..*/
+      if (mu != muprev) {
+        muprev = mu;
+        mv = (1 > mu ? 1 : (int)mu);
+        l = 0; /* pp[] is already ok up to pp[l] */
+        q = p0 = p = exp(-mu);
+      }
+
+      for(;;) {
+        /* Step U. uniform sample for inversion method */
+        u = __uniform__(_generator);
+        if (u <= p0)
+          return 0.;
+
+        /* Step T. table comparison until the end pp[l] of the
+           pp-table of cumulative poisson probabilities
+           (0.458 > ~= pp[9](= 0.45792971447) for mu=10 ) */
+        if (l != 0) {
+          for (k = (u <= 0.458) ? 1 : (l < mv ? l : mv);  k <= l; k++)
+            if (u <= pp[k])
+              return k;
+          if (l == 35) /* u > pp[35] */
+            continue;
+        }
+        /* Step C. creation of new poisson
+           probabilities p[l..] and their cumulatives q =: pp[k] */
+        l++;
+        for (k = l; k <= 35; k++) {
+          p *= mu / k;
+          q += p;
+          pp[k] = q;
+          if (u <= q) {
+            l = k;
+            return k;
+          }
+        }
+        l = 35;
+      } /* end(repeat) */
+    }/* mu < 10 */
+
+  } /* end {initialize persistent vars} */
+
+  /* Only if mu >= 10 : ----------------------- */
+
+  /* Step N. normal sample */
+  g = mu + s * THRandom_normal(_generator, 0, 1);/* norm_rand() ~ N(0,1), standard normal */
+
+  if (g >= 0.) {
+    pois = floor(g);
+    /* Step I. immediate acceptance if pois is large enough */
+    if (pois >= big_l)
+      return pois;
+    /* Step S. squeeze acceptance */
+    fk = pois;
+    difmuk = mu - fk;
+    u = __uniform__(_generator); /* ~ U(0,1) - sample */
+    if (d * u >= difmuk * difmuk * difmuk)
+      return pois;
+  }
+
+  /* Step P. preparations for steps Q and H.
+     (recalculations of parameters if necessary) */
+
+  if (new_big_mu || mu != muprev2) {
+    /* Careful! muprev2 is not always == muprev
+       because one might have exited in step I or S
+    */
+    muprev2 = mu;
+    omega = 0.398942280401432677939946059934 / s;
+    /* The quantities b1, b2, c3, c2, c1, c0 are for the Hermite
+     * approximations to the discrete normal probabilities fk. */
+
+    b1 = one_24 / mu;
+    b2 = 0.3 * b1 * b1;
+    c3 = one_7 * b1 * b2;
+    c2 = b2 - 15. * c3;
+    c1 = b1 - 6. * b2 + 45. * c3;
+    c0 = 1. - b1 + 3. * b2 - 15. * c3;
+    c = 0.1069 / mu; /* guarantees majorization by the 'hat'-function. */
+  }
+
+  if (g >= 0.) {
+    /* 'Subroutine' F is called (kflag=0 for correct return) */
+    kflag = 0;
+    goto Step_F;
+  }
+
+
+  for(;;) {
+    /* Step E. Exponential Sample */
+
+    E = THRandom_exponential(_generator, 1);	/* ~ Exp(1) (standard exponential) */
+
+    /*  sample t from the laplace 'hat'
+        (if t <= -0.6744 then pk < fk for all mu >= 10.) */
+    u = 2 * __uniform__(_generator) - 1.;
+    t = 1.8 + ((u >= 0) ? fabs(E) : -fabs(E));
+    if (t > -0.6744) {
+      pois = floor(mu + s * t);
+      fk = pois;
+      difmuk = mu - fk;
+
+      /* 'subroutine' F is called (kflag=1 for correct return) */
+      kflag = 1;
+
+    Step_F: /* 'subroutine' F : calculation of px,py,fx,fy. */
+
+      if (pois < 10) { /* use factorials from table fact[] */
+        px = -mu;
+        py = pow(mu, pois) / fact[(int)pois];
+      }
+      else {
+        /* Case pois >= 10 uses polynomial approximation
+           a0-a7 for accuracy when advisable */
+        del = one_12 / fk;
+        del = del * (1. - 4.8 * del * del);
+        v = difmuk / fk;
+        if (fabs(v) <= 0.25)
+          px = fk * v * v * (((((((a7 * v + a6) * v + a5) * v + a4) *
+                                v + a3) * v + a2) * v + a1) * v + a0)
+            - del;
+          else /* |v| > 1/4 */
+            px = fk * log(1. + v) - difmuk - del;
+            py = 0.398942280401432677939946059934 / sqrt(fk);
+      }
+      x = (0.5 - difmuk) / s;
+      x *= x;/* x^2 */
+      fx = -0.5 * x;
+      fy = omega * (((c3 * x + c2) * x + c1) * x + c0);
+      if (kflag > 0) {
+        /* Step H. Hat acceptance (E is repeated on rejection) */
+        if (c * fabs(u) <= py * exp(px + E) - fy * exp(fx + E))
+          break;
+      } else
+        /* Step Q. Quotient acceptance (rare case) */
+        if (fy - u * fy <= py * exp(px - fx))
+          break;
+    }/* t > -.67.. */
+  }
+  return pois;
+}

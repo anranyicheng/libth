@@ -77,6 +77,12 @@ TH_API double THRandom_gamma2(THGenerator *_generator, double shape, double scal
 /* Generates a random number from a Beta distribution. */
 TH_API double THRandom_beta(THGenerator *_generator, double a, double b);
 
+/* Generate a random number from a Hypergeometric distribution. */
+TH_API int THRandom_hypergeometric(THGenerator *_generator, int nr, int nb, int k);
+
+/* Generate a random number from a Poisson distribution. */
+TH_API int THRandom_poisson(THGenerator *_generator, int mu);
+
 /** Generates a random number from a geometric distribution.
     It returns an integer #i#, where $p(i) = (1-p) * p^(i-1)$.
     p must satisfy $0 < p < 1$.
