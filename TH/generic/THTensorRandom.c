@@ -28,6 +28,11 @@ void THTensor_(geometric)(THTensor *self, THGenerator *_generator, double p)
   TH_TENSOR_APPLY(real, self, *self_data = (real)THRandom_geometric(_generator, p););
 }
 
+void THTensor_(binomial)(THTensor *self, THGenerator *_generator, int n, double p)
+{
+  TH_TENSOR_APPLY(real, self, *self_data = (real)THRandom_binomial(_generator, n, p););
+}
+
 void THTensor_(bernoulli)(THTensor *self, THGenerator *_generator, double p)
 {
   TH_TENSOR_APPLY(real, self, *self_data = (real)THRandom_bernoulli(_generator, p););

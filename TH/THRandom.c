@@ -264,7 +264,7 @@ double THRandom_gamma(THGenerator *state, double shape)
   if (shape < 1.) {
     double u, v, x, y;
     while (1) {
-      u = THRandom_uniform(state, 0, 1);
+      u = __uniform__(state);
       v = THRandom_exponential(state, 1);
       if (u <= 1.0 - shape) {
         x = pow(u, 1./shape);
@@ -288,7 +288,7 @@ double THRandom_gamma(THGenerator *state, double shape)
     do {
       x = THRandom_normal(state, 0, 1);
       v = (1 + c * x) * (1 + c * x) * (1 + c * x);
-      u = THRandom_uniform(state, 0, 1);
+      u = __uniform__(state);
     } while (v <= 0. ||
              (((log(u) >= 0.5 * x * x + d * (1 - v + log(v)))) &&
               (u < 1.0 - 0.0331*(x*x)*(x*x))));
@@ -345,7 +345,7 @@ double THRandom_gamma2 (THGenerator *state, double a, double scale)
   if (a < 1.) { /* GS algorithm for parameters a < 1 */
     e = 1.0 + exp_m1 * a;
     for(;;) {
-      p = e * THRandom_uniform(state, 0, 1);
+      p = e * __uniform__(state);
       if (p >= 1.0) {
         x = -log((e - p) / a);
         if (THRandom_exponential(state, 1) >= (1.0 - a) * log(x))
@@ -379,7 +379,7 @@ double THRandom_gamma2 (THGenerator *state, double a, double scale)
     return scale * ret_val;
 
   /* Step 3: u = 0,1 - uniform sample. squeeze acceptance (s) */
-  u = THRandom_uniform(state, 0, 1);
+  u = __uniform__(state);
   if (d * u <= t * t * t)
     return scale * ret_val;
 
@@ -431,7 +431,7 @@ double THRandom_gamma2 (THGenerator *state, double a, double scale)
      *	u =  0,1 -uniform deviate
      *	t = (b,si)-double exponential (laplace) sample */
     e = THRandom_exponential(state, 1);
-    u = THRandom_uniform(state, 0, 1);
+    u = __uniform__(state);
     u = u + u - 1.0;
     if (u < 0.0)
       t = b - si * e;
@@ -470,8 +470,8 @@ double THRandom_beta(THGenerator *_generator, double a, double b)
     double U, V, X, Y;
 
     while (1) {
-      U = THRandom_uniform(_generator, 0, 1);
-      V = THRandom_uniform(_generator, 0, 1);
+      U = __uniform__(_generator);
+      V = __uniform__(_generator);
       X = pow(U, 1/a);
       Y = pow(V, 1/a);
 
@@ -512,4 +512,175 @@ int THRandom_bernoulli(THGenerator *_generator, double p)
 {
   THArgCheck(p >= 0 && p <= 1, 1, "must be >= 0 and <= 1");
   return(__uniform__(_generator) <= p);
+}
+
+int THRandom_binomial(THGenerator *_generator, int nin, double pp)
+{
+  /* FIXME: These should become THREAD_specific globals : */
+
+  static double c, fm, npq, p1, p2, p3, p4, qn;
+  static double xl, xll, xlr, xm, xr;
+
+  static double psave = -1.0;
+  static int nsave = -1;
+  static int mv;
+
+  double f, f1, f2, u, v, w, w2, x, x1, x2, z, z2;
+  double p, q, np, g, r, al, alv, amaxp, ffm, ynorm;
+  int i, ix, k, nn;
+
+  THArgCheck(pp >= 0 && pp <= 1, 1, "must be >= 0 and <= 1");
+
+  if (!isfinite(nin)) {
+    THError("binomial: needs valid n");
+    return (int)nan("");
+  }
+  r = nin;
+  if (!isfinite(pp) ||
+      /* n=0, p=0, p=1 are not errors <TSL>*/
+      r < 0 || pp < 0. || pp > 1.){
+    THError("binomial: needs valid probability.");
+    return (int)nan("");
+  }
+
+  if (r == 0 || pp == 0.) return 0;
+  if (pp == 1.) return r;
+
+  if (r >= INT_MAX)/* evade integer overflow,
+                      and r == INT_MAX gave only even values */ {
+    THError("binomial: too big n");
+    return (int)nan("");
+  }
+  /* else */
+  nn = (int) r;
+
+  p = fmin(pp, 1. - pp);
+  q = 1. - p;
+  np = nn * p;
+  r = p / q;
+  g = r * (nn + 1);
+
+  /* Setup, perform only when parameters change [using static (globals): */
+
+  /* FIXING: Want this thread safe
+     -- use as little (thread globals) as possible
+  */
+  if (pp != psave || nn != nsave) {
+    psave = pp;
+    nsave = nn;
+    if (np < 30.0) {
+      /* inverse cdf logic for mean less than 30 */
+      qn = pow(q, nn);
+      goto L_np_small;
+    } else {
+      ffm = np + p;
+      mv = (int) ffm;
+      fm = mv;
+      npq = np * q;
+      p1 = (int)(2.195 * sqrt(npq) - 4.6 * q) + 0.5;
+      xm = fm + 0.5;
+      xl = xm - p1;
+      xr = xm + p1;
+      c = 0.134 + 20.5 / (15.3 + fm);
+      al = (ffm - xl) / (ffm - xl * p);
+      xll = al * (1.0 + 0.5 * al);
+      al = (xr - ffm) / (xr * q);
+      xlr = al * (1.0 + 0.5 * al);
+      p2 = p1 * (1.0 + c + c);
+      p3 = p2 + c / xll;
+      p4 = p3 + c / xlr;
+    }
+  } else if (nn == nsave) {
+    if (np < 30.0)
+      goto L_np_small;
+  }
+
+  /*-------------------------- np = n*p >= 30 : ------------------- */
+  for(;;) {
+    u = __uniform__(_generator) * p4;
+    v = __uniform__(_generator);
+    /* triangular region */
+    if (u <= p1) {
+      ix = (int)(xm - p1 * v + u);
+      goto finis;
+    }
+    /* parallelogram region */
+    if (u <= p2) {
+      x = xl + (u - p1) / c;
+      v = v * c + 1.0 - fabs(xm - x) / p1;
+      if (v > 1.0 || v <= 0.)
+        continue;
+      ix = (int) x;
+    } else {
+      if (u > p3) {	/* right tail */
+        ix = (int)(xr - log(v) / xlr);
+        if (ix > nn)
+          continue;
+        v = v * (u - p3) * xlr;
+      } else {/* left tail */
+        ix = (int)(xl + log(v) / xll);
+        if (ix < 0)
+          continue;
+        v = v * (u - p2) * xll;
+      }
+    }
+    /* determine appropriate way to perform accept/reject test */
+    k = abs(ix - mv);
+    if (k <= 20 || k >= npq / 2 - 1) {
+      /* explicit evaluation */
+      f = 1.0;
+      if (mv < ix) {
+        for (i = mv + 1; i <= ix; i++)
+          f *= (g / i - r);
+      } else if (mv != ix) {
+        for (i = ix + 1; i <= mv; i++)
+          f /= (g / i - r);
+      }
+      if (v <= f)
+        goto finis;
+    } else {
+      /* squeezing using upper and lower bounds on log(f(x)) */
+      amaxp = (k / npq) * ((k * (k / 3. + 0.625) + 0.1666666666666) / npq + 0.5);
+      ynorm = -k * k / (2.0 * npq);
+      alv = log(v);
+      if (alv < ynorm - amaxp)
+        goto finis;
+      if (alv <= ynorm + amaxp) {
+        /* stirling's formula to machine accuracy */
+        /* for the final acceptance/rejection test */
+        x1 = ix + 1;
+        f1 = fm + 1.0;
+        z = nn + 1 - fm;
+        w = nn - ix + 1.0;
+        z2 = z * z;
+        x2 = x1 * x1;
+        f2 = f1 * f1;
+        w2 = w * w;
+        if (alv <= xm * log(f1 / x1) + (n - mv + 0.5) * log(z / w) + (ix - mv) * log(w * p / (x1 * q)) + (13860.0 - (462.0 - (132.0 - (99.0 - 140.0 / f2) / f2) / f2) / f2) / f1 / 166320.0 + (13860.0 - (462.0 - (132.0 - (99.0 - 140.0 / z2) / z2) / z2) / z2) / z / 166320.0 + (13860.0 - (462.0 - (132.0 - (99.0 - 140.0 / x2) / x2) / x2) / x2) / x1 / 166320.0 + (13860.0 - (462.0 - (132.0 - (99.0 - 140.0 / w2) / w2) / w2) / w2) / w / 166320.)
+          goto finis;
+      }
+    }
+  }
+
+ L_np_small:
+  /*---------------------- np = n*p < 30 : ------------------------- */
+
+  for(;;) {
+    ix = 0;
+    f = qn;
+    u = __uniform__(_generator);
+    for(;;) {
+      if (u < f)
+        goto finis;
+      if (ix > 110)
+        break;
+      u -= f;
+      ix++;
+      f *= (g / ix - r);
+    }
+  }
+ finis:
+  if (psave > 0.5)
+    ix = n - ix;
+  return (int)ix;
 }

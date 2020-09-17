@@ -85,4 +85,7 @@ TH_API int THRandom_geometric(THGenerator *_generator, double p);
 
 /* Returns true with probability $p$ and false with probability $1-p$ (p > 0). */
 TH_API int THRandom_bernoulli(THGenerator *_generator, double p);
+
+/* Returns a random number from a binomial distribution. */
+TH_API int THRandom_binomial(THGenerator *_generator, int n, double p);
 #endif
