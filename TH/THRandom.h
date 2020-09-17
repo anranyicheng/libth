@@ -72,6 +72,7 @@ TH_API double THRandom_logNormal(THGenerator *_generator, double mean, double st
 
 /* Generates a random number from a Gamma distribution. */
 TH_API double THRandom_gamma(THGenerator *_generator, double shape);
+TH_API double THRandom_gamma2(THGenerator *_generator, double shape, double scale);
 
 /* Generates a random number from a Beta distribution. */
 TH_API double THRandom_beta(THGenerator *_generator, double a, double b);
