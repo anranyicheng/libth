@@ -340,7 +340,6 @@ double THRandom_gamma2 (THGenerator *state, double a, double scale)
     THError("gamma2: shape and scale should be positive values.");
     return nan("");
   }
-  if(!isfinite(a) || !isfinite(scale)) return (1.0/0.0);
 
   if (a < 1.) { /* GS algorithm for parameters a < 1 */
     e = 1.0 + exp_m1 * a;
@@ -531,17 +530,7 @@ int THRandom_binomial(THGenerator *_generator, int nin, double pp)
 
   THArgCheck(pp >= 0 && pp <= 1, 1, "must be >= 0 and <= 1");
 
-  if (!isfinite(nin)) {
-    THError("binomial: needs valid n");
-    return (int)nan("");
-  }
   r = nin;
-  if (!isfinite(pp) ||
-      /* n=0, p=0, p=1 are not errors <TSL>*/
-      r < 0 || pp < 0. || pp > 1.){
-    THError("binomial: needs valid probability.");
-    return (int)nan("");
-  }
 
   if (r == 0 || pp == 0.) return 0;
   if (pp == 1.) return r;
@@ -737,11 +726,6 @@ int THRandom_hypergeometric(THGenerator *_generator, int nn1in, int nn2in, int k
   static double a, d, s, xl, xr, kl, kr, lamdl, lamdr, p1, p2, p3;
 
   /* check parameter validity */
-
-  if(!isfinite(nn1in) || !isfinite(nn2in) || !isfinite(kkin)){
-    THError("hypergeometric: nr, nb, k should be finite.");
-    return (int)nan("");
-  }
 
   if (nn1in < 0 || nn2in < 0 || kkin < 0 || kkin > nn1in + nn2in){
     THError("hypergeometric: nr, nb, k should be positive; k <= nr + nb");
@@ -1015,11 +999,6 @@ int THRandom_poisson(THGenerator *_generator, int mu)
   double del, difmuk= 0., E= 0., fk= 0., fx, fy, g, px, py, t, u= 0., v, x;
   double pois = -1.;
   int k, kflag, big_mu, new_big_mu = 0;
-
-  if (!isfinite(mu) || mu < 0) {
-    THError("poisson: mu should be positive number.");
-    return (int)nan("");
-  }
 
   if (mu <= 0.)
     return 0;
