@@ -966,7 +966,7 @@ int THRandom_hypergeometric(THGenerator *_generator, int nn1in, int nn2in, int k
 
 }
 
-int THRandom_poisson(THGenerator *_generator, int mu)
+int THRandom_poisson(THGenerator *_generator, double mu)
 {
 #define a0	-0.5
 #define a1	 0.3333333

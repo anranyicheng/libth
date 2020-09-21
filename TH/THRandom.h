@@ -81,7 +81,7 @@ TH_API double THRandom_beta(THGenerator *_generator, double a, double b);
 TH_API int THRandom_hypergeometric(THGenerator *_generator, int nr, int nb, int k);
 
 /* Generate a random number from a Poisson distribution. */
-TH_API int THRandom_poisson(THGenerator *_generator, int mu);
+TH_API int THRandom_poisson(THGenerator *_generator, double mu);
 
 /** Generates a random number from a geometric distribution.
     It returns an integer #i#, where $p(i) = (1-p) * p^(i-1)$.
