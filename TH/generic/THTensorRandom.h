@@ -8,6 +8,8 @@ TH_API void THTensor_(binomial)(THTensor *self, THGenerator *_generator, int n, 
 TH_API void THTensor_(bernoulli)(THTensor *self, THGenerator *_generator, double p);
 TH_API void THTensor_(bernoulli_FloatTensor)(THTensor *self, THGenerator *_generator, THFloatTensor *p);
 TH_API void THTensor_(bernoulli_DoubleTensor)(THTensor *self, THGenerator *_generator, THDoubleTensor *p);
+TH_API void THTensor_(hypergeometric)(THTensor *self, THGenerator *_generator, int nr, int nb, int k);
+TH_API void THTensor_(poisson)(THTensor *self, THGenerator *_generator, double mu);
 
 #if defined(TH_REAL_IS_FLOAT) || defined(TH_REAL_IS_DOUBLE)
 TH_API void THTensor_(uniform)(THTensor *self, THGenerator *_generator, double a, double b);

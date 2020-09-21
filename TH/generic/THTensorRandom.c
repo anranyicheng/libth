@@ -38,6 +38,16 @@ void THTensor_(bernoulli)(THTensor *self, THGenerator *_generator, double p)
   TH_TENSOR_APPLY(real, self, *self_data = (real)THRandom_bernoulli(_generator, p););
 }
 
+void THTensor_(hypergeometric)(THTensor *self, THGenerator *_generator, int nr, int nb, int k)
+{
+  TH_TENSOR_APPLY(real, self, *self_data = (real)THRandom_hypergeometric(_generator, nr, nb, k););
+}
+
+void THTensor_(poisson)(THTensor *self, THGenerator *_generator, double mu)
+{
+  TH_TENSOR_APPLY(real, self, *self_data = (real)THRandom_poisson(_generator, mu););
+}
+
 void THTensor_(bernoulli_FloatTensor)(THTensor *self, THGenerator *_generator, THFloatTensor *p)
 {
   TH_TENSOR_APPLY2(real, self, float, p, *self_data = (real)THRandom_bernoulli(_generator, (double)*p_data););
