@@ -31,6 +31,23 @@ static inline double TH_lerp(double a, double b, double weight) {
   return a + weight * (b-a);
 }
 
+static inline double TH_lgamma(double a) {
+  if ((a >= 1) && (a <= 100)) {
+    extern double _lgamma_cache[100];
+    int na = round(a);
+    if (na == a) {
+      if (_lgamma_cache[na-1] <= 0) {
+        _lgamma_cache[na-1] = lgamma(a);
+      }
+      return _lgamma_cache[na-1];
+    }  else {
+      return lgamma(a);
+    }
+  } else {
+    return lgamma(a);
+  }
+}
+
 static inline float TH_sigmoidf(float value) {
   if (value < 0) {
     if (value < -103.27)
@@ -59,6 +76,23 @@ static inline float TH_rsqrtf(float x) {
 
 static inline float TH_lerpf(float a, float b, float weight) {
   return a + weight * (b-a);
+}
+
+static inline float TH_lgammaf(float a) {
+  if ((a >= 1) && (a <= 100)) {
+    extern double _lgamma_cache[100];
+    int na = round(a);
+    if (na == a) {
+      if (_lgamma_cache[na-1] <= 0) {
+        _lgamma_cache[na-1] = lgamma(a);
+      }
+      return (float)_lgamma_cache[na-1];
+    }  else {
+      return lgammaf(a);
+    }
+  } else {
+    return lgammaf(a);
+  }
 }
 
 #endif // _THMATH_H
